@@ -26,7 +26,7 @@ class _PlacesSearchScreenState extends State<PlacesSearchScreen> {
   LatLng? _selectedLocation;
   Set<Marker> _markers = {};
   static const String apiKey =
-      "AIzaSyCOr_KyM48c7Uu_2Pk21yXdItisrZbCR10"; // Store securely
+      "AIzaSyBw1GfQx7suGPPUXdc8p5aWuw5CzdhxrP4"; // Store securely
 
   List<dynamic> visitedPlaces = [];
   List<dynamic> upcomingPlaces = [];
@@ -70,8 +70,9 @@ class _PlacesSearchScreenState extends State<PlacesSearchScreen> {
           markerId: MarkerId(place['name']),
           position: LatLng(place['lat'], place['lng']),
           infoWindow: InfoWindow(title: place['name']),
-          icon:
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueGreen,
+          ),
         ),
       );
     }
@@ -112,8 +113,9 @@ class _PlacesSearchScreenState extends State<PlacesSearchScreen> {
             ),
           );
         });
-        _mapController
-            ?.animateCamera(CameraUpdate.newLatLngZoom(_selectedLocation!, 14));
+        _mapController?.animateCamera(
+          CameraUpdate.newLatLngZoom(_selectedLocation!, 14),
+        );
         _fetchNearbyPlaces(loc.latitude, loc.longitude);
       }
     } catch (e) {
@@ -160,7 +162,8 @@ class _PlacesSearchScreenState extends State<PlacesSearchScreen> {
   }
 
   Future<void> _fetchNearbyPlaces(double lat, double lng) async {
-    String url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?"
+    String url =
+        "https://maps.googleapis.com/maps/api/place/nearbysearch/json?"
         "location=$lat,$lng&radius=10000&type=tourist_attraction&key=$apiKey";
 
     try {
@@ -168,37 +171,44 @@ class _PlacesSearchScreenState extends State<PlacesSearchScreen> {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        print(data);
         List<dynamic> places = data['results'];
 
-        List<dynamic> topPlaces = places
-            .where((place) =>
-                place.containsKey('rating') && place['rating'] >= 4.0)
-            .toList();
+        List<dynamic> topPlaces =
+            places
+                .where(
+                  (place) =>
+                      place.containsKey('rating') && place['rating'] >= 4.0,
+                )
+                .toList();
         topPlaces.sort((a, b) => b['rating'].compareTo(a['rating']));
 
         setState(() {
           _markers.clear();
-          _markers.addAll(topPlaces.map((place) {
-            String photoReference =
-                place['photos'] != null && place['photos'].isNotEmpty
-                    ? place['photos'][0]['photo_reference']
-                    : '';
+          _markers.addAll(
+            topPlaces.map((place) {
+              String photoReference =
+                  place['photos'] != null && place['photos'].isNotEmpty
+                      ? place['photos'][0]['photo_reference']
+                      : '';
 
-            return Marker(
-              markerId: MarkerId(place['name']),
-              position: LatLng(
-                place['geometry']['location']['lat'],
-                place['geometry']['location']['lng'],
-              ),
-              infoWindow: InfoWindow(
-                title: place['name'],
-                snippet: "Rating: ${place['rating'] ?? 'N/A'}",
-              ),
-              icon: BitmapDescriptor.defaultMarkerWithHue(
-                  BitmapDescriptor.hueBlue),
-              onTap: () => _showPlaceDetails(place), // ✅ Ensure this triggers
-            );
-          }));
+              return Marker(
+                markerId: MarkerId(place['name']),
+                position: LatLng(
+                  place['geometry']['location']['lat'],
+                  place['geometry']['location']['lng'],
+                ),
+                infoWindow: InfoWindow(
+                  title: place['name'],
+                  snippet: "Rating: ${place['rating'] ?? 'N/A'}",
+                ),
+                icon: BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueBlue,
+                ),
+                onTap: () => _showPlaceDetails(place), // ✅ Ensure this triggers
+              );
+            }),
+          );
         });
       } else {
         print("Failed to fetch places: ${response.body}");
