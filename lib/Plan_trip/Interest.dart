@@ -6,8 +6,6 @@ import 'package:http/http.dart' as http;
 import 'Prediced_trips_details.dart';
 
 class InterestPage extends StatefulWidget {
-  const InterestPage({super.key});
-
   @override
   _InterestPageState createState() => _InterestPageState();
 }
@@ -36,11 +34,10 @@ class _InterestPageState extends State<InterestPage> {
     tripId = prefs.getString('tripId');
 
     if (tripId != null) {
-      DocumentSnapshot doc =
-          await FirebaseFirestore.instance
-              .collection('trips')
-              .doc(tripId)
-              .get();
+      DocumentSnapshot doc = await FirebaseFirestore.instance
+          .collection('trips')
+          .doc(tripId)
+          .get();
 
       final data = doc.data() as Map<String, dynamic>;
       final details = data['tripDetails'] ?? {};
@@ -56,16 +53,15 @@ class _InterestPageState extends State<InterestPage> {
 
   Future<void> _fetchInterestSuggestions() async {
     final prompt =
-        "Suggest 10 interest categories for a $tripType trip to $destination between $startDate and $endDate. The suggestions should be suitable for all age groups and formatted as a single line, comma-separated list without bullet points, numbers, or newlines. Do not include any additional explanation or formatting.";
+        "Suggest 10 interest categories for a $tripType trip to $destination between $startDate and $endDate. The suggestions should be suitable for all age groups and formatted as a single line, comma-separated list without bullet points, numbers, or newlines.";
 
     final uri = Uri.parse("https://api.perplexity.ai/chat/completions");
     final headers = {
-      "Authorization":
-          "Bearer Your-Perplexity-API-Key", // Replace with your API key
+      "Authorization": "Bearer API_KEY",
       "Content-Type": "application/json",
     };
     final body = jsonEncode({
-      "model": "sonar", // or "sonar-small-online", depending on your access
+      "model": "sonar",
       "search_context_size": "high",
       "messages": [
         {"role": "system", "content": "Be precise and concise."},
@@ -76,29 +72,15 @@ class _InterestPageState extends State<InterestPage> {
 
     try {
       final response = await http.post(uri, headers: headers, body: body);
-      print("Perplexity Response: ${response.body}");
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final content = data['choices'][0]['message']['content'];
-        print("Raw interests content: $content");
-
         List<String> tempList = content.split(',');
-        suggestedInterests = [];
-
-        for (var e in tempList) {
-          String trimmed = e.toString().trim();
-          if (trimmed.isNotEmpty) {
-            suggestedInterests.add(trimmed);
-          }
-        }
-        print("Parsed interests: $suggestedInterests");
+        suggestedInterests = tempList.map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
       } else {
-        print("Failed to fetch interests: ${response.statusCode}");
         suggestedInterests = ["Sightseeing", "Local Cuisine", "Museum Visits"];
       }
     } catch (e) {
-      print("Error fetching interests: $e");
       suggestedInterests = ["Sightseeing", "Local Cuisine", "Museum Visits"];
     }
 
@@ -116,10 +98,13 @@ class _InterestPageState extends State<InterestPage> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder:
-              (context) => NextPage(
-                interests: selectedInterests,
-              ), // Replace with your next page
+          builder: (context) => NextPage(
+            interests: selectedInterests,
+            tripType: tripType,
+            destination: destination,
+            startDate: startDate,
+            endDate: endDate,
+          ),
         ),
       );
     }
@@ -137,129 +122,138 @@ class _InterestPageState extends State<InterestPage> {
           ),
         ),
         child: SafeArea(
-          child:
-              loading
-                  ? Center(child: CircularProgressIndicator())
-                  : Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          child: loading
+              ? Center(child: CircularProgressIndicator())
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Column(
                       children: [
-                        Text(
-                          "Select Your Interests",
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        SizedBox(height: 16),
-                        Card(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 4,
-                          child: Padding(
-                            padding: const EdgeInsets.all(12.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Suggestions:",
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                SizedBox(height: 8),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children:
-                                      suggestedInterests.map((interest) {
-                                        final selected = selectedInterests
-                                            .contains(interest);
-                                        return FilterChip(
-                                          label: Text(interest),
-                                          selected: selected,
-                                          onSelected: (bool value) {
-                                            setState(() {
-                                              if (value) {
-                                                selectedInterests.add(interest);
-                                              } else {
-                                                selectedInterests.remove(
-                                                  interest,
-                                                );
-                                              }
-                                            });
-                                          },
-                                        );
-                                      }).toList(),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 16),
-                        TextField(
-                          controller: customInterestController,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: Colors.white,
-                            labelText: "Add a custom interest",
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            suffixIcon: IconButton(
-                              icon: Icon(Icons.add),
-                              onPressed: () {
-                                final input =
-                                    customInterestController.text.trim();
-                                if (input.isNotEmpty &&
-                                    !selectedInterests.contains(input)) {
-                                  setState(() {
-                                    selectedInterests.add(input);
-                                    customInterestController.clear();
-                                  });
-                                }
-                              },
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 16),
-                        if (selectedInterests.isNotEmpty) ...[
-                          Text(
-                            "Selected Interests:",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children:
-                                selectedInterests
-                                    .map(
-                                      (interest) => Chip(
-                                        label: Text(interest),
-                                        deleteIcon: Icon(Icons.close),
-                                        onDeleted: () {
-                                          setState(() {
-                                            selectedInterests.remove(interest);
-                                          });
-                                        },
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Select Your Interests",
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
                                       ),
-                                    )
-                                    .toList(),
+                                    ),
+                                    SizedBox(height: 16),
+                                    Card(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      elevation: 4,
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(12.0),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              "Suggestions:",
+                                              style: TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                            SizedBox(height: 8),
+                                            Wrap(
+                                              spacing: 8,
+                                              runSpacing: 8,
+                                              children: suggestedInterests.map((interest) {
+                                                final selected = selectedInterests.contains(interest);
+                                                return FilterChip(
+                                                  label: Text(interest),
+                                                  selected: selected,
+                                                  onSelected: (bool value) {
+                                                    setState(() {
+                                                      if (value) {
+                                                        selectedInterests.add(interest);
+                                                      } else {
+                                                        selectedInterests.remove(interest);
+                                                      }
+                                                    });
+                                                  },
+                                                );
+                                              }).toList(),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(height: 16),
+                                    TextField(
+                                      controller: customInterestController,
+                                      decoration: InputDecoration(
+                                        filled: true,
+                                        fillColor: Colors.white,
+                                        labelText: "Add a custom interest",
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        suffixIcon: IconButton(
+                                          icon: Icon(Icons.add),
+                                          onPressed: () {
+                                            final input = customInterestController.text.trim();
+                                            if (input.isNotEmpty &&
+                                                !selectedInterests.contains(input)) {
+                                              setState(() {
+                                                selectedInterests.add(input);
+                                                customInterestController.clear();
+                                              });
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(height: 16),
+                                    if (selectedInterests.isNotEmpty) ...[
+                                      Text(
+                                        "Selected Interests:",
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: selectedInterests
+                                            .map(
+                                              (interest) => Chip(
+                                                label: Text(interest),
+                                                deleteIcon: Icon(Icons.close),
+                                                onDeleted: () {
+                                                  setState(() {
+                                                    selectedInterests.remove(interest);
+                                                  });
+                                                },
+                                              ),
+                                            )
+                                            .toList(),
+                                      ),
+                                      SizedBox(height: 16),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
-                          SizedBox(height: 16),
-                        ],
-                        Spacer(),
-                        Center(
+                        ),
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(16),
                           child: ElevatedButton(
                             onPressed: _saveInterestsAndContinue,
+                            child: Text("Continue"),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blueAccent,
                               padding: EdgeInsets.symmetric(
@@ -270,12 +264,12 @@ class _InterestPageState extends State<InterestPage> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: Text("Continue"),
                           ),
                         ),
                       ],
-                    ),
-                  ),
+                    );
+                  },
+                ),
         ),
       ),
     );
