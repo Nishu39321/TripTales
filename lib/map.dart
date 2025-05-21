@@ -4,8 +4,9 @@ import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/services.dart';
-import 'home_page.dart';
 class MapPage extends StatelessWidget {
+  const MapPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -16,6 +17,8 @@ class MapPage extends StatelessWidget {
 }
 
 class PlacesSearchScreen extends StatefulWidget {
+  const PlacesSearchScreen({super.key});
+
   @override
   _PlacesSearchScreenState createState() => _PlacesSearchScreenState();
 }

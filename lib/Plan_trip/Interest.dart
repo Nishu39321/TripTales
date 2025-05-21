@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 import 'Prediced_trips_details.dart';
 
 class InterestPage extends StatefulWidget {
+  const InterestPage({super.key});
+
   @override
   _InterestPageState createState() => _InterestPageState();
 }
@@ -54,7 +56,7 @@ class _InterestPageState extends State<InterestPage> {
 
   Future<void> _fetchInterestSuggestions() async {
     final prompt =
-        "Suggest 10 interest categories for a ${tripType} trip to ${destination} between ${startDate} and ${endDate}. The suggestions should be suitable for all age groups and formatted as a single line, comma-separated list without bullet points, numbers, or newlines. Do not include any additional explanation or formatting.";
+        "Suggest 10 interest categories for a $tripType trip to $destination between $startDate and $endDate. The suggestions should be suitable for all age groups and formatted as a single line, comma-separated list without bullet points, numbers, or newlines. Do not include any additional explanation or formatting.";
 
     final uri = Uri.parse("https://api.perplexity.ai/chat/completions");
     final headers = {
@@ -258,7 +260,6 @@ class _InterestPageState extends State<InterestPage> {
                         Center(
                           child: ElevatedButton(
                             onPressed: _saveInterestsAndContinue,
-                            child: Text("Continue"),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blueAccent,
                               padding: EdgeInsets.symmetric(
@@ -269,6 +270,7 @@ class _InterestPageState extends State<InterestPage> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
+                            child: Text("Continue"),
                           ),
                         ),
                       ],

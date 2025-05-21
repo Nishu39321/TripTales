@@ -1,13 +1,10 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_html_to_pdf/flutter_html_to_pdf.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:pdf/pdf.dart';
-import 'package:printing/printing.dart';
 
 String safeUrl(String url) {
   return url.replaceFirst("http://", "https://");
@@ -213,10 +210,10 @@ class AlbumPreview extends StatelessWidget {
   final String tripId;
 
   const AlbumPreview({
-    Key? key,
+    super.key,
     required this.html,
     required this.tripId,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -5,12 +5,14 @@ import 'EditTripDetailsPage.dart';
 import 'Interest.dart';
 
 class plantrip4 extends StatefulWidget {
+  const plantrip4({super.key});
+
   @override
   _TripPlannerPageState createState() => _TripPlannerPageState();
 }
 
 class _TripPlannerPageState extends State<plantrip4> {
-  PageController _pageController = PageController();
+  final PageController _pageController = PageController();
   int _currentPage = 0;
   String? tripId;
   String? tripType;

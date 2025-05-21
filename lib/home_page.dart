@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
-
+import 'chatbot_page.dart';
 import 'Plan_trip/planTrip1.dart';
 import 'incoming_request_screen.dart';
 import 'dynamic_link.dart';
@@ -17,11 +17,13 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 // ignore: unused_import
 import 'trip_chat_page.dart';
+import 'chatbot_page.dart';
+
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   _HomePageState createState() => _HomePageState();
@@ -116,8 +118,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _fetchTopPicks() async {
-    const apiKey =
-        'AIzaSyBw1GfQx7suGPPUXdc8p5aWuw5CzdhxrP4'; // Replace with your API key
+    const apiKey = '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'; // Use your SONAR API key here
 
     try {
       LocationPermission permission = await Geolocator.checkPermission();
@@ -136,55 +137,82 @@ class _HomePageState extends State<HomePage> {
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-      String url =
-          'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${position.latitude},${position.longitude}&radius=500000&type=tourist_attraction&key=$apiKey';
 
-      final response = await http.get(Uri.parse(url));
-      final jsonData = jsonDecode(response.body);
+final prompt = '''
+You are a travel assistant. Provide a list of 5 popular tourist destinations near latitude ${position.latitude} and longitude ${position.longitude} that are ideal to visit in the current season. 
+Take into account weather, seasonal activities, and popularity during this time of year.
 
-      if (jsonData['status'] == 'OK') {
+For each destination, provide:
+- title (name),
+- - a real and valid image URL (ending with .jpg or .png),
+- a short image URL (if available),
+- a brief description,
+- latitude and longitude,
+- and types/categories.
+
+Format the response as a JSON array of objects with keys: title, image, description, lat, lng, types.
+''';
+
+
+
+
+      final url = 'https://api.perplexity.ai/chat/completions';
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $apiKey',
+          'accept': 'application/json',
+        },
+        body: jsonEncode({
+          'model': 'sonar-pro',
+          'messages': [
+            {
+              'role': 'system',
+              'content': 'You are a helpful travel assistant.',
+            },
+            {'role': 'user', 'content': prompt},
+          ],
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final answer = data['choices'][0]['message']['content'];
+
+        // Parse the JSON string from the answer
+        // Sometimes the AI may return text + JSON, so extract JSON part carefully
+        final jsonStart = answer.indexOf('[');
+        final jsonEnd = answer.lastIndexOf(']') + 1;
+        final jsonString =
+            (jsonStart != -1 && jsonEnd != -1)
+                ? answer.substring(jsonStart, jsonEnd)
+                : '[]';
+
+        final List<dynamic> placesJson = jsonDecode(jsonString);
+
         List<Map<String, String>> fetchedPicks = [];
-        final results = jsonData['results'];
 
-        for (var place in results) {
-          if (place['photos'] != null && place['photos'].isNotEmpty) {
-            final name = place['name'];
-            final photoRef = place['photos'][0]['photo_reference'];
-            final photoUrl =
-                'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=$photoRef&key=$apiKey';
-            final address = place['vicinity'] ?? "Address not available";
-            final rating = place['rating']?.toString() ?? "N/A";
-            final types =
-                (place['types'] as List<dynamic>?)
-                    ?.take(3)
-                    .map((t) => t.toString().replaceAll('_', ' '))
-                    .join(', ') ??
-                "No info";
-
-            fetchedPicks.add({
-              "title": name ?? "Unknown Place",
-              "image": photoUrl,
-              "address": address,
-              "rating": rating,
-              "types": types,
-              "lat": place['geometry']['location']['lat'].toString(),
-              "lng": place['geometry']['location']['lng'].toString(),
-            });
-
-            if (fetchedPicks.length == 5) break;
-          }
+        for (var place in placesJson) {
+          fetchedPicks.add({
+            "title": place['title'] ?? "Unknown Place",
+            "image": place['image'] ?? "https://via.placeholder.com/400",
+            "address": place['description'] ?? "No description available",
+            "rating": "N/A",
+            "types": place['types']?.toString() ?? "No info",
+            "lat": place['lat']?.toString() ?? "0",
+            "lng": place['lng']?.toString() ?? "0",
+          });
         }
 
         setState(() {
           topPicks = fetchedPicks;
-          error =
-              fetchedPicks.length < 5
-                  ? "Only found ${fetchedPicks.length} places with photos"
-                  : null;
+          error = fetchedPicks.isEmpty ? "No places found" : null;
         });
       } else {
         setState(() {
-          error = "Failed to get top picks: ${jsonData['status']}";
+          error = "Failed to get top picks: ${response.statusCode}";
         });
       }
     } catch (e) {
@@ -194,21 +222,20 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-Future<void> _initializeNotifications() async {
-  const AndroidInitializationSettings androidSettings =
-      AndroidInitializationSettings('@mipmap/ic_launcher');
+  Future<void> _initializeNotifications() async {
+    const AndroidInitializationSettings androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
 
-  const InitializationSettings settings = InitializationSettings(
-    android: androidSettings,
-  );
+    const InitializationSettings settings = InitializationSettings(
+      android: androidSettings,
+    );
 
-  await flutterLocalNotificationsPlugin.initialize(settings);
+    await flutterLocalNotificationsPlugin.initialize(settings);
 
-  if (await Permission.notification.isDenied) {
-    await Permission.notification.request();
+    if (await Permission.notification.isDenied) {
+      await Permission.notification.request();
+    }
   }
-}
-
 
   Future<void> _checkTripsAndNotify() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -255,128 +282,83 @@ Future<void> _initializeNotifications() async {
       }
     }
   }
-Future<void> _showNotification({
-  required String title,
-  required String body,
-}) async {
-  const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-    'trip_channel',
-    'Trip Reminders',
-    channelDescription: 'Notifications about your trip plans',
-    importance: Importance.max,
-    priority: Priority.high,
-  );
 
-  const NotificationDetails notificationDetails = NotificationDetails(
-    android: androidDetails,
-  );
+  Future<void> _showNotification({
+    required String title,
+    required String body,
+  }) async {
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+          'trip_channel',
+          'Trip Reminders',
+          channelDescription: 'Notifications about your trip plans',
+          importance: Importance.max,
+          priority: Priority.high,
+        );
 
-  await flutterLocalNotificationsPlugin.show(
-    0,
-    title,
-    body,
-    notificationDetails,
-  );
-}
+    const NotificationDetails notificationDetails = NotificationDetails(
+      android: androidDetails,
+    );
 
-  // @override
-  // Widget build(BuildContext context) {
-  //   final List<Widget> _pages = [
-  //     _buildHomeContent(),
-  //     MapPage(),
-  //     plantrip1(),
-  //     // Center(child: Text("Document a Trip Page Coming Soon")),
-  //     YourTripsPage(),
-  //   ];
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      title,
+      body,
+      notificationDetails,
+    );
+  }
 
-  //   return Scaffold(
-  //     drawer: _buildProfileDrawer(),
-  //     body: Stack(
-  //       children: [
-  //         PageView(
-  //           controller: pageController,
-  //           onPageChanged: (index) {
-  //             setState(() {
-  //               _selectedIndex = index;
-  //             });
-  //           },
-  //           children: _pages, // Use _pages list for the pages
-  //         ),
-  //       ],
-  //     ),
-  //     bottomNavigationBar: BottomNavigationBar(
-  //       type: BottomNavigationBarType.fixed,
-  //       currentIndex: _selectedIndex,
-  //       onTap: (index) {
-  //         setState(() => _selectedIndex = index);
-  //         pageController.jumpToPage(index);
-  //       },
-  //       items: const [
-  //         BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-  //         BottomNavigationBarItem(icon: Icon(Icons.map), label: "Maps"),
-  //         BottomNavigationBarItem(
-  //           icon: Icon(Icons.flight_takeoff),
-  //           label: "Plan a Trip",
-  //         ),
-  //         // BottomNavigationBarItem(
-  //         //   icon: Icon(Icons.article),
-  //         //   label: "Document a Trip",
-  //         // ),
-  //         BottomNavigationBarItem(
-  //           icon: Icon(Icons.card_travel),
-  //           label: "Your Trip",
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-@override
-Widget build(BuildContext context) {
-  final List<Widget> _pages = [
-    _buildHomeContent(),
-    MapPage(),
-    plantrip1(),
-    YourTripsPage(),
-  ];
+  @override
+  Widget build(BuildContext context) {
+    final List<Widget> pages = [
+      _buildHomeContent(),
+      MapPage(),
+      plantrip1(),
+      YourTripsPage(),
+    ];
 
-  return Scaffold(
-    drawer: _buildProfileDrawer(),
-    body: Stack(
-      children: [
-        PageView(
-          controller: pageController,
-          onPageChanged: (index) {
-            setState(() {
-              _selectedIndex = index;
-            });
-          },
-          children: _pages,
-        ),
-      ],
-    ),
-    bottomNavigationBar: BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      currentIndex: _selectedIndex,
-      onTap: (index) {
-        setState(() => _selectedIndex = index);
-        pageController.jumpToPage(index);
-      },
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-        BottomNavigationBarItem(icon: Icon(Icons.map), label: "Maps"),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.flight_takeoff),
-          label: "Plan a Trip",
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.card_travel),
-          label: "Your Trip",
-        ),
-      ],
-    ),
-  );
-}
+    return Scaffold(
+      body: PageView(
+        controller: pageController,
+        onPageChanged: (index) {
+          setState(() => _selectedIndex = index);
+        },
+        children: pages,
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() => _selectedIndex = index);
+          pageController.jumpToPage(index);
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+          BottomNavigationBarItem(icon: Icon(Icons.map), label: "Maps"),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.flight_takeoff),
+            label: "Plan a Trip",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.card_travel),
+            label: "Your Trip",
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ChatbotPage()),
+          );
+        },
+        backgroundColor: Colors.blueAccent,
+        child: const Icon(Icons.chat),
+      ),
+    );
+  }
 
+  // ignore: unused_element
   Widget _buildProfileDrawer() {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -504,7 +486,7 @@ Widget build(BuildContext context) {
 
   Widget _buildQuoteSection() {
     return Center(
-      child: Container(
+      child: SizedBox(
         width: 300,
         height: 50,
         child: DefaultTextStyle(
@@ -942,6 +924,8 @@ class _PlaceDetailPageState extends State<PlaceDetailPage> {
 
 class SavedTripsSection extends StatelessWidget {
   final String googleApiKey = 'AIzaSyBw1GfQx7suGPPUXdc8p5aWuw5CzdhxrP4';
+
+  const SavedTripsSection({super.key});
 
   Future<String?> _fetchPhotoUrl(String location) async {
     final queryUrl =

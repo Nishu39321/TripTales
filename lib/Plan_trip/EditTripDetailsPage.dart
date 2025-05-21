@@ -262,7 +262,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class EditTripDetailsPage extends StatefulWidget {
   final String tripId;
 
-  EditTripDetailsPage({required this.tripId});
+  const EditTripDetailsPage({super.key, required this.tripId});
 
   @override
   _EditTripDetailsPageState createState() => _EditTripDetailsPageState();

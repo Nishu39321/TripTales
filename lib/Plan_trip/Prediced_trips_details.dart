@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class NextPage extends StatelessWidget {
   final List<String> interests;
-  NextPage({required this.interests});
+  const NextPage({super.key, required this.interests});
 
   @override
   Widget build(BuildContext context) {

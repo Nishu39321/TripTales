@@ -16,7 +16,7 @@ final TextEditingController _messageController = TextEditingController();
 class TripChatPage extends StatefulWidget {
   final String tripId;
 
-  const TripChatPage({Key? key, required this.tripId}) : super(key: key);
+  const TripChatPage({super.key, required this.tripId});
 
   @override
   _TripChatPageState createState() => _TripChatPageState();
@@ -347,7 +347,7 @@ class _TripChatPageState extends State<TripChatPage> {
 
 class VideoPlayerPreview extends StatefulWidget {
   final File file;
-  const VideoPlayerPreview({Key? key, required this.file}) : super(key: key);
+  const VideoPlayerPreview({super.key, required this.file});
 
   @override
   _VideoPlayerPreviewState createState() => _VideoPlayerPreviewState();
@@ -383,7 +383,7 @@ class _VideoPlayerPreviewState extends State<VideoPlayerPreview> {
 
 class VideoPlayerWidget extends StatefulWidget {
   final String url;
-  const VideoPlayerWidget({Key? key, required this.url}) : super(key: key);
+  const VideoPlayerWidget({super.key, required this.url});
 
   @override
   _VideoPlayerWidgetState createState() => _VideoPlayerWidgetState();

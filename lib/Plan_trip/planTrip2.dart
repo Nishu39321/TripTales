@@ -6,6 +6,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'planTrip3.dart'; // Adjust path if needed
 
 class plantrip2 extends StatefulWidget {
+  const plantrip2({super.key});
+
   @override
   _plantrip2State createState() => _plantrip2State();
 }

@@ -9,6 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 class plantrip1 extends StatelessWidget {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
  final FirebaseAuth _auth = FirebaseAuth.instance;
+  plantrip1({super.key});
 
   // Function to store trip selection in Firestore and save Trip ID locally
  Future<void> _storeTripSelection(String tripType) async {
